@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Pedantix Clone</title>
+        <link rel="stylesheet" href="/style.css" />
+    </head>
+    <body>
+        <div id="app">
+            <header>
+                <h1>Pedantix Clone</h1>
+                <p class="subtitle">Devinez l'article Wikipédia caché</p>
+                <button id="reset-btn" title="Recommencer">↺</button>
+            </header>
+
+            <div id="solved-banner" class="hidden">
+                Bravo ! Vous avez trouvé l'article !
+            </div>
+
+            <div id="main-layout">
+                <div id="game-col">
+                    <form id="guess-form" autocomplete="off">
+                        <input
+                            id="guess-input"
+                            type="text"
+                            placeholder="Mot ou titre de l'article…"
+                            autocomplete="off"
+                            spellcheck="false"
+                        />
+                        <button type="submit">Envoyer</button>
+                    </form>
+
+                    <section id="article">
+                        <div id="title-display"></div>
+                        <div id="text-display"></div>
+                    </section>
+                </div>
+
+                <aside id="history-col">
+                    <div class="hist-header">
+                        <span class="hist-num">N°</span>
+                        <span class="hist-word">Mot</span>
+                    </div>
+                    <ul id="history"></ul>
+                </aside>
+            </div>
+        </div>
+
+        <script src="/app.js"></script>
+    </body>
+</html>

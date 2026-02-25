@@ -1,0 +1,321 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: #f0ede8;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 1rem;
+}
+
+#app {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+header {
+    text-align: center;
+    padding: 0.4rem 0;
+    position: relative;
+}
+header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+.subtitle {
+    color: #888;
+    font-size: 0.85rem;
+    margin-top: 0.15rem;
+}
+
+#reset-btn {
+    position: absolute;
+    top: 0.4rem;
+    right: 0;
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    color: #888;
+    font-size: 1rem;
+    padding: 0.25rem 0.55rem;
+    cursor: pointer;
+    transition:
+        color 0.15s,
+        border-color 0.15s;
+}
+#reset-btn:hover {
+    color: #e05555;
+    border-color: #e05555;
+    background: none;
+}
+
+/* ── Solved banner ──────────────────────────────────────────────────────── */
+#solved-banner {
+    background: #d4edda;
+    border: 1px solid #a8d5b0;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    text-align: center;
+    font-weight: 600;
+    color: #155724;
+}
+.hidden {
+    display: none !important;
+}
+
+/* ── Two-column layout ─────────────────────────────────────────────────── */
+#main-layout {
+    display: grid;
+    grid-template-columns: 1fr 230px;
+    gap: 1rem;
+    align-items: start;
+}
+
+#game-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* ── Guess form ─────────────────────────────────────────────────────────── */
+#guess-form {
+    display: flex;
+    gap: 0.5rem;
+}
+
+input[type="text"] {
+    flex: 1;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.15s;
+}
+input[type="text"]:focus {
+    border-color: #4a7cde;
+}
+
+button {
+    padding: 0.55rem 1.1rem;
+    background: #4a7cde;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+button:hover {
+    background: #3a6bcb;
+}
+button:disabled {
+    background: #9ab0e0;
+    cursor: default;
+}
+
+/* ── Article card ───────────────────────────────────────────────────────── */
+#article {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1.5rem 2rem;
+}
+
+/* ── Title as article heading ───────────────────────────────────────────── */
+#title-display {
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid #eee;
+}
+
+#title-display .token {
+    display: inline-block;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: inherit;
+    border-radius: 3px;
+}
+#title-display .token.masked {
+    background: #1e1e1e;
+    color: transparent;
+    padding: 0 2px;
+    user-select: none;
+}
+#title-display .token.revealed {
+    background: transparent;
+    color: inherit;
+}
+
+/* ── Body text ──────────────────────────────────────────────────────────── */
+#text-display {
+    line-height: 2.2;
+    font-size: 1rem;
+    word-break: break-word;
+}
+
+/* ── Tokens ─────────────────────────────────────────────────────────────── */
+/* ↓ TOKEN SIZE: adjust font-size and/or padding to resize all tokens */
+.token {
+    display: inline-block;
+    font-family: monospace;
+    font-size: 0.82em;    /* ← make smaller/larger here */
+    border-radius: 3px;
+    vertical-align: baseline;
+    padding: 1px 4px;     /* ← reduce top/bottom to make less tall */
+}
+
+/* Unguessed word — solid black block */
+.token.masked {
+    background: #1e1e1e;
+    color: transparent;
+    user-select: none;
+}
+
+/* Exact / lemma hit — just remove the background; keep same size for stability */
+.token.revealed {
+    background: transparent;
+    color: #1a1a1a;
+}
+
+/* Near-match label: dark bg, gray brightness encodes proximity (lighter = closer) */
+.token.labeled {
+    background: #2d2d2d;
+}
+.token.labeled.score-frozen { color: #2e2e2e; } /* below 0.45 — invisible */
+.token.labeled.score-cold   { color: #505050; } /* 0.45 – 0.58 */
+.token.labeled.score-mild   { color: #7a7a7a; } /* 0.58 – 0.70 */
+.token.labeled.score-warm   { color: #b8b8b8; } /* 0.70 – 0.82 */
+.token.labeled.score-hot    { color: #efefef; } /* 0.82 + */
+
+/* Most-recently-submitted miss: override with heat colors */
+.token.labeled.latest.score-frozen { color: #444;    }
+.token.labeled.latest.score-cold   { color: #777;    }
+.token.labeled.latest.score-mild   { color: #aaa;    }
+.token.labeled.latest.score-warm   { color: #c49a2a; }
+.token.labeled.latest.score-hot    { color: #e8711a; }
+
+/* ── History sidebar ────────────────────────────────────────────────────── */
+#history-col {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 0.65rem 0.5rem;
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 130px);
+    overflow-y: auto;
+}
+
+.hist-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0 0.3rem 0.45rem;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 0.25rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #bbb;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.hist-header .hist-num {
+    width: 1.8rem;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+#history {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+#history li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.18rem 0.3rem;
+    border-radius: 3px;
+    font-size: 0.82rem;
+}
+#history li:hover {
+    background: #f5f5f5;
+}
+
+#history li .hist-num {
+    width: 1.8rem;
+    text-align: right;
+    flex-shrink: 0;
+    color: #ccc;
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
+}
+#history li .hist-word {
+    flex: 1;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#history li.hit .hist-word {
+    color: #155724;
+}
+#history li.win .hist-word {
+    color: #155724;
+    font-weight: 700;
+}
+#history li.miss .hist-word {
+    color: #721c24;
+}
+#history li.invalid .hist-word {
+    color: #856404;
+}
+
+.score-badge {
+    font-size: 0.67rem;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 999px;
+    font-family: monospace;
+    flex-shrink: 0;
+}
+.score-badge.hot {
+    background: #e8711a;
+    color: #fff;
+}
+.score-badge.warm {
+    background: #c49a2a;
+    color: #fff;
+}
+.score-badge.cold {
+    background: #888;
+    color: #fff;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+    #main-layout {
+        grid-template-columns: 1fr;
+    }
+    #history-col {
+        position: static;
+        max-height: 280px;
+    }
+}
