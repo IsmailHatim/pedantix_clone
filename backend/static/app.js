@@ -30,7 +30,8 @@ function loadState() {
 function saveState() { localStorage.setItem(STATE_KEY, JSON.stringify(state)); }
 
 function extractWords(text) {
-  return [...text.matchAll(/[\w][\w'\-]*/gu)].map(m => m[0]);
+  // \p{L} matches any Unicode letter (including accented French: à, é, ô …)
+  return [...text.matchAll(/\p{L}[\p{L}'\-]*/gu)].map(m => m[0]);
 }
 
 // ── Score → CSS class ────────────────────────────────────────────────────
@@ -276,6 +277,11 @@ document.getElementById("guess-form").addEventListener("submit", async (e) => {
 
   if (wordData.status === "hit") {
     revealPositions(wordData.revealed_texts || {});
+    // Also update similarity labels for still-unrevealed positions
+    if (wordData.word_scores && wordData.word_scores.length) {
+      updateBestMatch(wordData.word_scores, word);
+      buildDisplay();
+    }
   } else if (wordData.status === "miss") {
     // Update state, then rebuild display so latest miss shows in heat colors
     // and all previous labels become gray

@@ -4,8 +4,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from . import config, dictionary, similarity, wiki
 from .models import (
@@ -86,6 +87,7 @@ async def lifespan(app: FastAPI):
         data
     )
     from .puzzle import build_lemma_index as _build_lemma_index
+
     _title_lemma_index = _build_lemma_index(_title_tokens)
     _title = data["title"]
     _PUZZLE_ID = f"wiki-{normalize(_title)}"
@@ -101,7 +103,16 @@ async def lifespan(app: FastAPI):
     yield
 
 
+class NgrokSkipWarningMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["ngrok-skip-browser-warning"] = "1"
+        return response
+
+
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(NgrokSkipWarningMiddleware)
 
 _STATIC_DIR = Path(__file__).parent.parent / "static"
 
@@ -158,24 +169,35 @@ def post_guess(body: GuessRequest):
     title_positions = _title_lemma_index.get(lemma, [])
     title_revealed_texts = (
         {str(pos): _title_tokens[pos].value for pos in title_positions}
-        if title_positions else None
+        if title_positions
+        else None
+    )
+
+    # Always compute similarity — used for labels on misses AND on hits for unrevealed words
+    norm = normalize(guess)
+    pos_scores, best_score = similarity.score_positions(
+        norm, _vocab_embeddings, _word_index
     )
 
     positions = _lemma_index.get(lemma, [])
     if positions:
+        revealed_set = {str(p) for p in positions}
         revealed_texts = {str(pos): _tokens[pos].value for pos in positions}
+        # Keep similarity labels only for positions not being revealed right now
+        hit_scores = [
+            p
+            for p in pos_scores
+            if p["score"] >= config.MIN_LABEL_SCORE
+            and str(p["pos"]) not in revealed_set
+        ]
         return GuessResponse(
             status="hit",
             positions=positions,
             revealed_texts=revealed_texts,
             title_revealed_texts=title_revealed_texts,
+            word_scores=hit_scores if hit_scores else None,
         )
 
-    # Miss: compute per-position similarity scores for every word in the article
-    norm = normalize(guess)
-    pos_scores, best_score = similarity.score_positions(
-        norm, _vocab_embeddings, _word_index
-    )
     pos_scores = [p for p in pos_scores if p["score"] >= config.MIN_LABEL_SCORE]
     return GuessResponse(
         status="miss",
