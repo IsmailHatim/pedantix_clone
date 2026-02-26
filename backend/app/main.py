@@ -1,6 +1,7 @@
 import json
 import logging
 from contextlib import asynccontextmanager
+from datetime import date
 from pathlib import Path
 
 import numpy as np
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 _CACHE_PATH = Path(__file__).parent.parent / "puzzle_cache.json"
 _FALLBACK_PATH = Path(__file__).parent.parent / "puzzle.json"
+_DAILY_DIR = Path(__file__).parent.parent / "daily_puzzles"
 
 # ---------------------------------------------------------------------------
 # Puzzle state (loaded once at startup)
@@ -35,9 +37,27 @@ _title: str = ""
 _PUZZLE_ID: str = "unknown"
 
 
-async def _load_puzzle_data() -> dict:
-    """Try Wikipedia fetch → cached JSON → hardcoded fallback."""
-    # 1. Try Wikipedia
+async def _load_puzzle_data() -> tuple[dict, str]:
+    """Load puzzle data. Returns (data, source) where source is used to build puzzle_id.
+
+    Priority:
+      1. Daily puzzle file  (daily_puzzles/YYYY-MM-DD.json)
+      2. Wikipedia live fetch  (writes puzzle_cache.json)
+      3. puzzle_cache.json
+      4. puzzle.json  (hardcoded fallback)
+    """
+    # 1. Today's daily puzzle
+    today = date.today()
+    daily_path = _DAILY_DIR / f"{today.isoformat()}.json"
+    if daily_path.exists():
+        try:
+            data = json.loads(daily_path.read_text(encoding="utf-8"))
+            logger.info("[puzzle] Loaded daily puzzle for %s: %s", today, data.get("title"))
+            return data, f"daily-{today.isoformat()}"
+        except Exception as exc:
+            logger.warning("[puzzle] Daily puzzle read failed (%s). Falling back.", exc)
+
+    # 2. Try Wikipedia live fetch
     try:
         data = await wiki.fetch_intro(
             config.WIKI_PAGE_TITLE, max_paragraphs=config.MAX_PARAGRAPHS
@@ -46,23 +66,23 @@ async def _load_puzzle_data() -> dict:
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         logger.info("[puzzle] Fetched from Wikipedia: %s", data["title"])
-        return data
+        return data, f"wiki-{normalize(data['title'])}"
     except Exception as exc:
         logger.warning("[puzzle] Wikipedia fetch failed (%s). Trying cache.", exc)
 
-    # 2. Try puzzle_cache.json
+    # 3. Try puzzle_cache.json
     if _CACHE_PATH.exists():
         try:
             data = json.loads(_CACHE_PATH.read_text(encoding="utf-8"))
             logger.info("[puzzle] Loaded from cache: %s", data.get("title"))
-            return data
+            return data, f"wiki-{normalize(data['title'])}"
         except Exception as exc:
             logger.warning("[puzzle] Cache read failed (%s). Using fallback.", exc)
 
-    # 3. Hardcoded puzzle.json
+    # 4. Hardcoded puzzle.json
     data = json.loads(_FALLBACK_PATH.read_text(encoding="utf-8"))
     logger.info("[puzzle] Loaded from hardcoded fallback: %s", data.get("title"))
-    return data
+    return data, f"wiki-{normalize(data['title'])}"
 
 
 @asynccontextmanager
@@ -81,7 +101,7 @@ async def lifespan(app: FastAPI):
     # Load similarity model (blocking, runs once)
     similarity.load_model()
 
-    data = await _load_puzzle_data()
+    data, _PUZZLE_ID = await _load_puzzle_data()
     _tokens, _word_index, _lemma_index, _title_normalized, _title_tokens = build_puzzle(
         data
     )
@@ -89,7 +109,6 @@ async def lifespan(app: FastAPI):
 
     _title_lemma_index = _build_lemma_index(_title_tokens)
     _title = data["title"]
-    _PUZZLE_ID = f"wiki-{normalize(_title)}"
 
     # Precompute embeddings for all unique vocabulary words
     _vocab_embeddings = similarity.precompute(list(_word_index.keys()))
