@@ -27,7 +27,8 @@ def load_model() -> None:
     """Load Gensim model if path is configured, otherwise fall back to spaCy."""
     global _kv, _available
 
-    model_path = Path(config.WORD2VEC_MODEL_PATH)
+    model_path = Path(config.WORD2VEC_MODEL_PATH).resolve()
+    logger.info("[similarity] Looking for Word2Vec model at: %s", model_path)
     if model_path.exists():
         try:
             from gensim.models import KeyedVectors  # noqa: PLC0415
@@ -68,18 +69,12 @@ def is_in_vocab(word: str) -> bool:
     """Return True if *word* is in the loaded model's vocabulary.
 
     When the Gensim model is loaded this gives exact Pedantix-style validation
-    (frWiki vocabulary, cutoff 200).  When only spaCy is available we check its
-    lexeme table.  When nothing is loaded we allow everything.
+    (frWiki vocabulary, cutoff 200).  When the model is not loaded, all words
+    are allowed (no restriction).
     """
-    w = word.lower()
-    if _kv is not None:
-        return w in _kv
-
-    nlp = nlp_cache.get()
-    if nlp is not None:
-        return nlp.vocab[w].is_alpha and nlp.vocab[w].prob > -20
-
-    return True  # no model loaded — no restriction
+    if _kv is None:
+        return True  # Gensim model not loaded — no restriction
+    return word.lower() in _kv
 
 
 # ---------------------------------------------------------------------------
