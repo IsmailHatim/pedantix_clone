@@ -209,6 +209,15 @@ function reconstructTitle() {
   }).join("");
 }
 
+let _unknownTimer = null;
+function showUnknownMsg(word) {
+  const el = document.getElementById("unknown-msg");
+  el.textContent = `« ${word} » — Je ne connais pas ce mot.`;
+  el.classList.remove("hidden");
+  if (_unknownTimer) clearTimeout(_unknownTimer);
+  _unknownTimer = setTimeout(() => el.classList.add("hidden"), 3000);
+}
+
 function showSolved() {
   document.getElementById("solved-banner").classList.remove("hidden");
   document.getElementById("guess-form").querySelector("button").disabled = true;
@@ -253,6 +262,12 @@ document.getElementById("guess-form").addEventListener("submit", async (e) => {
   if (!word) return;
 
   const [wordData, titleData] = await Promise.all([postGuess(word), postTitleGuess(word)]);
+
+  // Unknown word — show message, no history entry
+  if (wordData.status === "unknown") {
+    showUnknownMsg(word);
+    return;
+  }
 
   // Reveal title words that match this guess (applies to hits, misses, and full-title guess)
   if (wordData.title_revealed_texts && Object.keys(wordData.title_revealed_texts).length) {

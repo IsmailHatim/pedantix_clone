@@ -6,4 +6,4 @@ venv/
 *.egg-info/
 .pytest_cache/
 puzzle_cache.json
-.bin
+*.bin
