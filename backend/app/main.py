@@ -7,7 +7,7 @@ import numpy as np
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from . import config, similarity, wiki
+from . import config, dictionary, similarity, wiki
 from .models import (
     GuessRequest,
     GuessResponse,
@@ -147,6 +147,9 @@ def post_guess(body: GuessRequest):
     guess = body.guess.strip()
     if len(guess) < config.MIN_GUESS_LENGTH:
         return GuessResponse(status="invalid", positions=[])
+
+    if not dictionary.is_known(guess):
+        return GuessResponse(status="unknown", positions=[])
 
     # Lemma lookup: covers exact match + all morphological variants (conjugations, plurals…)
     lemma = normalize(lemmatize_word(guess.lower()))

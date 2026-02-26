@@ -8,7 +8,7 @@ class GuessRequest(BaseModel):
 
 
 class GuessResponse(BaseModel):
-    status: Literal["hit", "miss", "invalid"]
+    status: Literal["hit", "miss", "invalid", "unknown"]
     positions: list[int]
     revealed_texts: dict[str, str] | None = None        # body pos (str) → actual token text
     title_revealed_texts: dict[str, str] | None = None  # title pos (str) → actual token text

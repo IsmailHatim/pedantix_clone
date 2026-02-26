@@ -1,28 +1,58 @@
-"""Semantic similarity scoring using spaCy French word vectors."""
+"""Semantic similarity scoring.
+
+Primary backend: Gensim KeyedVectors (frWiki Word2Vec by Fauconnier).
+Fallback: spaCy fr_core_news_lg word vectors (already loaded for lemmatization).
+
+Set WORD2VEC_MODEL_PATH to the path of the .bin model file to activate the
+Gensim backend.  When the file is absent the spaCy fallback is used automatically.
+"""
 
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import numpy as np
 
-from . import nlp_cache
+from . import config, nlp_cache
 
 logger = logging.getLogger(__name__)
 
+# Gensim KeyedVectors instance (None when not loaded)
+_kv = None
 _available = False
 
 
 def load_model() -> None:
-    """Load the shared spaCy model. Call once at startup."""
-    global _available
+    """Load Gensim model if path is configured, otherwise fall back to spaCy."""
+    global _kv, _available
+
+    model_path = Path(config.WORD2VEC_MODEL_PATH)
+    if model_path.exists():
+        try:
+            from gensim.models import KeyedVectors  # noqa: PLC0415
+            logger.info("[similarity] Loading Word2Vec model from %s …", model_path)
+            _kv = KeyedVectors.load_word2vec_format(str(model_path), binary=True)
+            _available = True
+            logger.info(
+                "[similarity] Word2Vec ready — %d words in vocabulary.", len(_kv)
+            )
+            return
+        except Exception as exc:
+            logger.warning(
+                "[similarity] Could not load Word2Vec model (%s). Falling back to spaCy.", exc
+            )
+
+    # spaCy fallback (already loaded by nlp_cache for lemmatization)
     try:
         nlp_cache.load()
         _available = nlp_cache.get() is not None
         if _available:
-            logger.info("[similarity] Model ready.")
+            logger.info("[similarity] Using spaCy word vectors as fallback.")
+        else:
+            logger.warning("[similarity] No similarity model available.")
     except Exception as exc:
-        logger.warning("[similarity] Model unavailable (%s). Scores will be null.", exc)
+        logger.warning("[similarity] spaCy fallback unavailable (%s).", exc)
         _available = False
 
 
@@ -30,7 +60,41 @@ def is_available() -> bool:
     return _available
 
 
-def _vec(word: str):
+# ---------------------------------------------------------------------------
+# Dictionary check
+# ---------------------------------------------------------------------------
+
+def is_in_vocab(word: str) -> bool:
+    """Return True if *word* is in the loaded model's vocabulary.
+
+    When the Gensim model is loaded this gives exact Pedantix-style validation
+    (frWiki vocabulary, cutoff 200).  When only spaCy is available we check its
+    lexeme table.  When nothing is loaded we allow everything.
+    """
+    w = word.lower()
+    if _kv is not None:
+        return w in _kv
+
+    nlp = nlp_cache.get()
+    if nlp is not None:
+        return nlp.vocab[w].is_alpha and nlp.vocab[w].prob > -20
+
+    return True  # no model loaded — no restriction
+
+
+# ---------------------------------------------------------------------------
+# Embedding helpers
+# ---------------------------------------------------------------------------
+
+def _vec_gensim(word: str) -> np.ndarray | None:
+    if _kv is None or word not in _kv:
+        return None
+    v = _kv[word].astype(np.float32)
+    norm = np.linalg.norm(v)
+    return v / norm if norm > 0 else None
+
+
+def _vec_spacy(word: str) -> np.ndarray | None:
     nlp = nlp_cache.get()
     if nlp is None:
         return None
@@ -39,6 +103,14 @@ def _vec(word: str):
         return None
     return tok.vector / tok.vector_norm
 
+
+def _vec(word: str) -> np.ndarray | None:
+    return _vec_gensim(word) if _kv is not None else _vec_spacy(word)
+
+
+# ---------------------------------------------------------------------------
+# Public API (unchanged contract)
+# ---------------------------------------------------------------------------
 
 def precompute(vocab: list[str]) -> dict[str, np.ndarray]:
     """Embed all vocab words. Returns {word: unit-norm vector}."""

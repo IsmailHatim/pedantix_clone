@@ -8,6 +8,7 @@ os.environ.setdefault("HF_HUB_VERBOSITY", "error")
 os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
 
 WIKI_PAGE_TITLE: str = os.getenv("WIKI_PAGE_TITLE", "Locomotive à vapeur")
+WORD2VEC_MODEL_PATH: str = os.getenv("WORD2VEC_MODEL_PATH", "frWiki_no_phrase_no_postag_1000_skip_cut200.bin")
 
 MAX_PARAGRAPHS: int = int(os.getenv("MAX_PARAGRAPHS", "2"))
 MIN_GUESS_LENGTH: int = int(os.getenv("MIN_GUESS_LENGTH", "1"))
