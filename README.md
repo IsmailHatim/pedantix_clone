@@ -4,7 +4,7 @@ A French Wikipedia word-reveal guessing game. The introduction of a hidden Wikip
 
 ## Stack
 
-- **Backend:** FastAPI + spaCy `fr_core_news_lg` (lemmatization & word vectors)
+- **Backend:** FastAPI + spaCy `fr_core_news_sm` (lemmatization) + Gensim Word2Vec (similarity & dictionary)
 - **Frontend:** Vanilla JS, no framework
 - **Data:** Wikipedia MediaWiki API → `puzzle_cache.json` → `puzzle.json` fallback
 
@@ -13,10 +13,10 @@ A French Wikipedia word-reveal guessing game. The introduction of a hidden Wikip
 ```bash
 cd backend
 pip install -r requirements.txt
-python -m spacy download fr_core_news_lg
+python -m spacy download fr_core_news_sm
 
-# Download the Word2Vec model (dictionary + similarity, ~500 MB)
-# https://fauconnier.github.io/#data  →  frWiki_no_phrase_no_postag_1000_skip_cut200.bin
+# Download the Word2Vec model (dictionary validation + similarity scoring, ~500 MB)
+# https://fauconnier.github.io/#data  →  frWiki_no_lem_no_postag_no_phrase_1000_skip_cut200.bin
 # Place the .bin file in backend/ or set WORD2VEC_MODEL_PATH to its location.
 
 uvicorn app.main:app --reload
@@ -24,14 +24,22 @@ uvicorn app.main:app --reload
 
 Open [http://localhost:8000](http://localhost:8000).
 
+## How it works
+
+- Every word token in the article is masked. Guessing a word reveals all its occurrences (lemma-aware: guessing "être" reveals "est", "était", etc.).
+- Every guess also runs semantic similarity against all remaining hidden words — close matches appear as gray labels (darker = further, lighter = closer).
+- Only words from the frWiki vocabulary are accepted; unknown words are rejected with "Je ne connais pas ce mot."
+- The game is won when all title words are individually revealed.
+- State is fully client-side (localStorage).
+
 ## Config (env vars)
 
 | Variable | Default | Description |
 |---|---|---|
 | `WIKI_PAGE_TITLE` | `Locomotive à vapeur` | Wikipedia article to use |
-| `WORD2VEC_MODEL_PATH` | `frWiki_no_phrase_no_postag_1000_skip_cut200.bin` | Path to Gensim `.bin` model |
+| `WORD2VEC_MODEL_PATH` | `frWiki_no_lem_no_postag_no_phrase_1000_skip_cut200.bin` | Path to Gensim `.bin` model |
 | `MAX_PARAGRAPHS` | `2` | Number of intro paragraphs to include |
-| `MIN_LABEL_SCORE` | `0.40` | Minimum similarity score to show a label |
+| `MIN_LABEL_SCORE` | `0.30` | Minimum similarity score to show a label |
 | `ADMIN_MODE` | `true` | Show the reset button |
 
 ## Tests
