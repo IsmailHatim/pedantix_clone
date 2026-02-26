@@ -4,9 +4,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import numpy as np
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from . import config, dictionary, similarity, wiki
 from .models import (
@@ -103,16 +102,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-class NgrokSkipWarningMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        response.headers["ngrok-skip-browser-warning"] = "1"
-        return response
-
-
 app = FastAPI(lifespan=lifespan)
-
-app.add_middleware(NgrokSkipWarningMiddleware)
 
 _STATIC_DIR = Path(__file__).parent.parent / "static"
 
