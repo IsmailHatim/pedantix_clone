@@ -1,6 +1,8 @@
 """Wikipedia MediaWiki API fetch + HTML parsing for French Wikipedia."""
 
+import random
 import re
+from pathlib import Path
 
 import httpx
 from bs4 import BeautifulSoup
@@ -12,6 +14,39 @@ _HEADERS = {
 
 # Minimum character length for a paragraph to be included
 _MIN_PARA_LEN = 50
+
+
+def pick_random_title_from_file(path: str) -> str:
+    """Return a random article title from a local text file (one title per line).
+
+    Lines starting with '#' and blank lines are ignored.
+    Raises ValueError if the file has no valid entries.
+    """
+    lines = [
+        line.strip()
+        for line in Path(path).read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
+    if not lines:
+        raise ValueError(f"Articles file has no valid titles: {path}")
+    return random.choice(lines)
+
+
+async def fetch_random_title() -> str:
+    """Return the title of a random French Wikipedia article (main namespace)."""
+    params = {
+        "action": "query",
+        "list": "random",
+        "rnnamespace": "0",
+        "rnlimit": "1",
+        "format": "json",
+        "formatversion": "2",
+    }
+    async with httpx.AsyncClient(timeout=10.0, headers=_HEADERS) as client:
+        resp = await client.get(_API_URL, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+    return data["query"]["random"][0]["title"]
 
 
 async def fetch_intro(title: str, max_paragraphs: int = 3) -> dict[str, str]:

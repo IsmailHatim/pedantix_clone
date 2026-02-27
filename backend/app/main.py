@@ -59,9 +59,15 @@ async def _load_puzzle_data() -> tuple[dict, str]:
 
     # 2. Try Wikipedia live fetch
     try:
-        data = await wiki.fetch_intro(
-            config.WIKI_PAGE_TITLE, max_paragraphs=config.MAX_PARAGRAPHS
-        )
+        if config.WIKI_PAGE_TITLE:
+            title = config.WIKI_PAGE_TITLE
+        elif Path(config.ARTICLES_FILE).exists():
+            title = wiki.pick_random_title_from_file(config.ARTICLES_FILE)
+            logger.info("[puzzle] Picked random article from file: %s", title)
+        else:
+            title = await wiki.fetch_random_title()
+            logger.info("[puzzle] No articles file found — picked random Wikipedia article: %s", title)
+        data = await wiki.fetch_intro(title, max_paragraphs=config.MAX_PARAGRAPHS)
         _CACHE_PATH.write_text(
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
         )
