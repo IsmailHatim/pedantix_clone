@@ -48,3 +48,13 @@ Open [http://localhost:8000](http://localhost:8000).
 cd backend
 pytest
 ```
+
+## Acknowledgements
+
+- **[Pédantix](https://pedantix.certitudes.org)** by [Enigmatix](https://pedantix.certitudes.org) — the original French daily Wikipedia guessing game this project is inspired by.
+
+- **[French Word Embeddings](https://fauconnier.github.io/#data)** by Jean-Philippe Fauconnier — pre-trained Word2Vec models for French used for similarity scoring and dictionary validation. Licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+
+  > Fauconnier, Jean-Philippe (2015). *French Word Embeddings*. http://fauconnier.github.io
+
+- **[Wikipédia](https://fr.wikipedia.org)** — article content fetched via the MediaWiki API.
